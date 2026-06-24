@@ -1,10 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import QRCode from 'react-qr-code';
-import { PlusCircle, ArrowLeft, Download } from 'lucide-react';
+import { PlusCircle, ArrowLeft, Download, Lock } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import './AdminPage.css';
 
 export default function AdminPage() {
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    const authTime = sessionStorage.getItem('admin_auth_time');
+    if (!authTime) return false;
+    const isExpired = Date.now() - parseInt(authTime, 10) > 10 * 60 * 1000; // 10분 초과 시
+    if (isExpired) {
+      sessionStorage.removeItem('admin_auth_time');
+      return false;
+    }
+    return true;
+  });
+  const [passwordInput, setPasswordInput] = useState('');
+  const [loginError, setLoginError] = useState(false);
+
   const [sessionName, setSessionName] = useState('');
   const [sessionDate, setSessionDate] = useState('');
   const [sessionStartTime, setSessionStartTime] = useState('');
@@ -13,6 +26,22 @@ export default function AdminPage() {
   
   // 실제 출석 데이터 (Google Sheets 연동)
   const [attendees, setAttendees] = useState([]);
+
+  // 10분 타이머 체크 (자동 로그아웃)
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    
+    const checkAuthInterval = setInterval(() => {
+      const authTime = sessionStorage.getItem('admin_auth_time');
+      if (authTime && Date.now() - parseInt(authTime, 10) > 10 * 60 * 1000) {
+        setIsAuthenticated(false);
+        sessionStorage.removeItem('admin_auth_time');
+        alert("보안을 위해 로그인 후 10분이 지나 자동으로 로그아웃 되었습니다.");
+      }
+    }, 5000);
+    
+    return () => clearInterval(checkAuthInterval);
+  }, [isAuthenticated]);
 
   // 5초마다 구글 시트에서 출석자 목록을 가져옵니다
   useEffect(() => {
@@ -49,6 +78,18 @@ export default function AdminPage() {
       if (intervalId) clearInterval(intervalId);
     };
   }, [activeSession]);
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    if (passwordInput === 'chaedu2026!') {
+      sessionStorage.setItem('admin_auth_time', Date.now().toString());
+      setIsAuthenticated(true);
+      setLoginError(false);
+      setPasswordInput(''); // 로그인 성공 시 비밀번호 입력창 초기화
+    } else {
+      setLoginError(true);
+    }
+  };
 
   const handleCreateSession = (e) => {
     e.preventDefault();
@@ -103,6 +144,42 @@ export default function AdminPage() {
       console.error("이미지 캡처 오류:", error);
     }
   };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="admin-container">
+        <div className="card admin-card animate-fade-in" style={{ maxWidth: '400px', padding: '3rem 2rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '2rem' }}>
+            <div style={{ backgroundColor: '#eff6ff', padding: '1rem', borderRadius: '50%', marginBottom: '1rem' }}>
+              <Lock size={32} color="#2563eb" />
+            </div>
+            <h2 style={{ margin: 0, color: '#0f172a' }}>관리자 로그인</h2>
+            <p style={{ color: '#64748b', marginTop: '0.5rem' }}>접근 권한이 필요합니다</p>
+          </div>
+          
+          <form onSubmit={handleLogin}>
+            <div className="form-group">
+              <input
+                type="password"
+                className="form-input"
+                placeholder="비밀번호를 입력하세요"
+                value={passwordInput}
+                onChange={(e) => {
+                  setPasswordInput(e.target.value);
+                  setLoginError(false);
+                }}
+                autoFocus
+              />
+              {loginError && <p style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.5rem' }}>비밀번호가 일치하지 않습니다.</p>}
+            </div>
+            <button type="submit" className="btn-primary" style={{ width: '100%' }}>
+              접속하기
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="admin-container">
