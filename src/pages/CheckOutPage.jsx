@@ -44,6 +44,11 @@ export default function CheckOutPage() {
     e.preventDefault();
     if (!empId.trim() || !empName.trim()) return;
     
+    if (empId.length !== 7) {
+      alert("사번은 영문과 숫자를 혼합하여 정확히 7자리를 입력해주세요.");
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
@@ -134,10 +139,11 @@ export default function CheckOutPage() {
                 <input
                   id="empId"
                   type="text"
-                  placeholder="예: 2026001"
+                  placeholder="예: B123456"
                   value={empId}
                   onChange={(e) => setEmpId(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
                   className="form-input"
+                  maxLength={7}
                   required
                 />
               </div>
