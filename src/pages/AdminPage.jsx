@@ -23,55 +23,118 @@ export default function AdminPage() {
   const [sessionStartTime, setSessionStartTime] = useState('');
   const [sessionEndTime, setSessionEndTime] = useState('');
   const [activeSession, setActiveSession] = useState(null);
+  const [qrMode, setQrMode] = useState('check-in'); // 'check-in' or 'check-out'
+  const [isLoading, setIsLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
   
   // 실제 출석 데이터 (Google Sheets 연동)
   const [attendees, setAttendees] = useState([]);
+  
+  const API_URL = 'https://script.google.com/macros/s/AKfycbxSrQEi1xlGab7i-4IfyuAKeaQlkt6KnL7O9CesVeX6VR4Oyuu6E8EORQBQKDQT9Uhh/exec';
 
-  // 10분 타이머 체크 (자동 로그아웃)
+  // 10분 타이머 체크 (자동 로그아웃) 및 활동 시 타이머 갱신
   useEffect(() => {
     if (!isAuthenticated) return;
     
+    // 5초마다 남은 시간 체크
     const checkAuthInterval = setInterval(() => {
       const authTime = sessionStorage.getItem('admin_auth_time');
       if (authTime && Date.now() - parseInt(authTime, 10) > 10 * 60 * 1000) {
         setIsAuthenticated(false);
         sessionStorage.removeItem('admin_auth_time');
-        alert("보안을 위해 로그인 후 10분이 지나 자동으로 로그아웃 되었습니다.");
+        alert("마지막 사용 후 10분이 경과되어 자동으로 로그아웃 되었습니다.");
       }
     }, 5000);
     
-    return () => clearInterval(checkAuthInterval);
+    // 사용자 활동 감지 시 타이머 갱신 (스로틀링 적용)
+    let throttleTimeout = null;
+    const updateAuthTime = () => {
+      if (!throttleTimeout) {
+        sessionStorage.setItem('admin_auth_time', Date.now().toString());
+        throttleTimeout = setTimeout(() => {
+          throttleTimeout = null;
+        }, 1000); // 1초에 최대 1번만 갱신 (성능 최적화)
+      }
+    };
+
+    window.addEventListener('mousemove', updateAuthTime);
+    window.addEventListener('mousedown', updateAuthTime);
+    window.addEventListener('keydown', updateAuthTime);
+    window.addEventListener('touchstart', updateAuthTime);
+    window.addEventListener('scroll', updateAuthTime);
+    
+    return () => {
+      clearInterval(checkAuthInterval);
+      window.removeEventListener('mousemove', updateAuthTime);
+      window.removeEventListener('mousedown', updateAuthTime);
+      window.removeEventListener('keydown', updateAuthTime);
+      window.removeEventListener('touchstart', updateAuthTime);
+      window.removeEventListener('scroll', updateAuthTime);
+      if (throttleTimeout) clearTimeout(throttleTimeout);
+    };
   }, [isAuthenticated]);
 
-  // 5초마다 구글 시트에서 출석자 목록을 가져옵니다
+  // 초기 로드 시 서버에서 활성 세션 가져오기
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    
+    const fetchActiveSession = async () => {
+      try {
+        const response = await fetch(`${API_URL}?action=get-active-session`);
+        const data = await response.json();
+        if (data && data.id) { // 세션 데이터가 있으면
+          setActiveSession(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch active session:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchActiveSession();
+  }, [isAuthenticated]);
+
+  // 5초마다 구글 시트에서 출석자 목록 및 활성 세션 상태를 가져옵니다
   useEffect(() => {
     let intervalId;
     
-    const fetchAttendees = async () => {
+    const fetchAttendeesAndStatus = async () => {
       if (!activeSession) return;
       
       try {
-        const url = `https://script.google.com/macros/s/AKfycbyBxRD36k07suV8TkTlTBQzEL8l0NyFASgy6WCVbim1kphE4PYmxmwhorDt-4HBSLc/exec?sessionName=${encodeURIComponent(activeSession.name)}`;
+        // 활성 세션 상태 확인
+        const sessionRes = await fetch(`${API_URL}?action=get-active-session`);
+        const sessionData = await sessionRes.json();
+        
+        // 다른 기기에서 세션이 종료된 경우
+        if (!sessionData || !sessionData.id) {
+          setActiveSession(null);
+          setAttendees([]);
+          alert("세션이 종료되었습니다.");
+          return;
+        }
+
+        // 출석자 목록 갱신
+        const url = `${API_URL}?sessionName=${encodeURIComponent(activeSession.name)}`;
         const response = await fetch(url);
         const data = await response.json();
         
         // data는 2차원 배열 형태 (시트 데이터)
-        // 첫 번째 줄(index 0)은 헤더이므로 제외
         if (Array.isArray(data) && data.length > 1) {
           const rows = data.slice(1);
-          // 가장 최근에 출석한 사람이 위로 오도록 역순 정렬
           setAttendees(rows.reverse());
         } else {
           setAttendees([]);
         }
       } catch (error) {
-        console.error("Failed to fetch attendees:", error);
+        console.error("Failed to fetch attendees or status:", error);
       }
     };
 
     if (activeSession) {
-      fetchAttendees(); // 즉시 1회 호출
-      intervalId = setInterval(fetchAttendees, 5000); // 5초마다 갱신
+      fetchAttendeesAndStatus(); // 즉시 1회 호출
+      intervalId = setInterval(fetchAttendeesAndStatus, 5000); // 5초마다 갱신
     }
     
     return () => {
@@ -91,42 +154,78 @@ export default function AdminPage() {
     }
   };
 
-  const handleCreateSession = (e) => {
+  const handleCreateSession = async (e) => {
     e.preventDefault();
     if (!sessionName.trim()) return;
     
-    // 타임스탬프와 랜덤 문자열을 조합하여 고유한 세션 ID 생성
-    const randomString = Math.random().toString(36).substring(2, 8);
-    const sessionId = `session_${Date.now()}_${randomString}`;
+    setIsProcessing(true);
     
-    // check-in url 구성 (로컬 개발환경 기준)
-    const checkInUrl = `${window.location.origin}/check-in?sessionId=${sessionId}&name=${encodeURIComponent(sessionName)}&date=${encodeURIComponent(sessionDate)}&startTime=${encodeURIComponent(sessionStartTime)}&endTime=${encodeURIComponent(sessionEndTime)}`;
-    
-    setActiveSession({
-      id: sessionId,
-      name: sessionName,
-      date: sessionDate,
-      startTime: sessionStartTime,
-      endTime: sessionEndTime,
-      url: checkInUrl
-    });
-    setAttendees([]); // 새로운 세션 시 출석자 초기화
+    try {
+      // 타임스탬프와 랜덤 문자열을 조합하여 고유한 세션 ID 생성
+      const randomString = Math.random().toString(36).substring(2, 8);
+      const sessionId = `session_${Date.now()}_${randomString}`;
+      
+      // url 구성 (로컬 개발환경 기준)
+      const params = `sessionId=${sessionId}&name=${encodeURIComponent(sessionName)}&date=${encodeURIComponent(sessionDate)}&startTime=${encodeURIComponent(sessionStartTime)}&endTime=${encodeURIComponent(sessionEndTime)}`;
+      const checkInUrl = `${window.location.origin}/check-in?${params}`;
+      const checkOutUrl = `${window.location.origin}/check-out?${params}`;
+      
+      const newSession = {
+        id: sessionId,
+        name: sessionName,
+        date: sessionDate,
+        startTime: sessionStartTime,
+        endTime: sessionEndTime,
+        checkInUrl,
+        checkOutUrl
+      };
+      
+      await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'create-session', ...newSession })
+      });
+      
+      setActiveSession(newSession);
+      setQrMode('check-in');
+      setAttendees([]);
+    } catch (error) {
+      console.error("Failed to create session:", error);
+      alert("세션 생성 중 오류가 발생했습니다.");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  const handleReset = () => {
-    setActiveSession(null);
-    setSessionName('');
-    setSessionDate('');
-    setSessionStartTime('');
-    setSessionEndTime('');
-    setAttendees([]);
+  const handleReset = async () => {
+    if (!window.confirm("정말로 세션을 종료하시겠습니까? (다른 기기에서도 즉시 종료됩니다)")) return;
+    
+    setIsProcessing(true);
+    try {
+      await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'end-session' })
+      });
+      
+      setActiveSession(null);
+      setSessionName('');
+      setSessionDate('');
+      setSessionStartTime('');
+      setSessionEndTime('');
+      setAttendees([]);
+    } catch (error) {
+      console.error("Failed to end session:", error);
+      alert("세션 종료 중 오류가 발생했습니다.");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleDownloadQR = async () => {
     const element = document.getElementById("qr-export-section");
     if (!element) return;
     
-    // 버튼 텍스트 변경 효과를 위해 원본은 그대로 둡니다.
     try {
       const canvas = await html2canvas(element, { 
         scale: 2, 
@@ -189,7 +288,11 @@ export default function AdminPage() {
           <p className="admin-subtitle">Employee Attendance Manager</p>
         </div>
         
-        {!activeSession ? (
+        {isLoading ? (
+          <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b', fontSize: '1.1rem' }}>
+            서버와 동기화 중입니다...
+          </div>
+        ) : !activeSession ? (
           <form onSubmit={handleCreateSession} className="create-session-form">
             <div className="form-group">
               <label className="form-label" htmlFor="sessionName">새로운 교육 세션 이름</label>
@@ -201,6 +304,7 @@ export default function AdminPage() {
                 value={sessionName}
                 onChange={(e) => setSessionName(e.target.value)}
                 autoFocus
+                disabled={isProcessing}
               />
             </div>
 
@@ -213,6 +317,7 @@ export default function AdminPage() {
                   type="date"
                   value={sessionDate}
                   onChange={(e) => setSessionDate(e.target.value)}
+                  disabled={isProcessing}
                 />
               </div>
               <div style={{ flex: 1 }}>
@@ -223,6 +328,7 @@ export default function AdminPage() {
                     className="form-input"
                     value={sessionStartTime}
                     onChange={(e) => setSessionStartTime(e.target.value)}
+                    disabled={isProcessing}
                   />
                   <span style={{ fontWeight: '600', color: 'var(--text-secondary)' }}>~</span>
                   <input
@@ -230,14 +336,15 @@ export default function AdminPage() {
                     className="form-input"
                     value={sessionEndTime}
                     onChange={(e) => setSessionEndTime(e.target.value)}
+                    disabled={isProcessing}
                   />
                 </div>
               </div>
             </div>
 
-            <button type="submit" className="btn-primary" disabled={!sessionName.trim()}>
+            <button type="submit" className="btn-primary" disabled={!sessionName.trim() || isProcessing}>
               <PlusCircle size={22} />
-              새로운 QR 코드 발급하기
+              {isProcessing ? '서버에 저장 중...' : '새로운 QR 코드 발급하기'}
             </button>
           </form>
         ) : (
@@ -254,19 +361,36 @@ export default function AdminPage() {
                 </p>
               )}
               
+              <div className="qr-toggle-container">
+                <button 
+                  className={`qr-toggle-btn ${qrMode === 'check-in' ? 'active' : ''}`}
+                  onClick={() => setQrMode('check-in')}
+                  type="button"
+                >
+                  출석 체크 QR
+                </button>
+                <button 
+                  className={`qr-toggle-btn checkout ${qrMode === 'check-out' ? 'active' : ''}`}
+                  onClick={() => setQrMode('check-out')}
+                  type="button"
+                >
+                  종료 체크 QR
+                </button>
+              </div>
+
               <p className="instruction-text" style={{ marginBottom: '2rem', fontSize: '1.1rem' }}>
-                스마트폰 카메라로 아래 <strong>QR 코드</strong>를 스캔해주세요
+                스마트폰 카메라로 아래 <strong>{qrMode === 'check-in' ? '출석 체크' : '종료 체크'} QR 코드</strong>를 스캔해주세요
               </p>
               
               <div className="qr-wrapper" style={{ margin: 0, padding: '1rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', border: '1px solid #f1f5f9', borderRadius: '16px', backgroundColor: 'white' }}>
                 <QRCode
                   id="session-qr-code"
-                  value={activeSession.url}
+                  value={qrMode === 'check-in' ? activeSession.checkInUrl : activeSession.checkOutUrl}
                   size={260}
                   style={{ height: "auto", maxWidth: "100%", width: "100%" }}
                   viewBox={`0 0 260 260`}
                   level="H"
-                  fgColor="#0f172a"
+                  fgColor={qrMode === 'check-in' ? "#0f172a" : "#c2410c"}
                 />
               </div>
             </div>
@@ -282,7 +406,9 @@ export default function AdminPage() {
 
             <div className="link-info">
               <p>접속 링크 (테스트용):</p>
-              <a href={activeSession.url} target="_blank" rel="noreferrer">{activeSession.url}</a>
+              <a href={qrMode === 'check-in' ? activeSession.checkInUrl : activeSession.checkOutUrl} target="_blank" rel="noreferrer">
+                {qrMode === 'check-in' ? activeSession.checkInUrl : activeSession.checkOutUrl}
+              </a>
             </div>
             
             <div className="dashboard-preview">
@@ -292,26 +418,47 @@ export default function AdminPage() {
               ) : (
                 <ul style={{ listStyle: 'none', padding: 0, maxHeight: '300px', overflowY: 'auto', textAlign: 'left' }}>
                   {attendees.map((row, index) => {
-                    // row = ["Timestamp", "Session ID", "Session Name", "Employee ID", "Employee Name", "User Agent"]
-                    // 유효한 날짜인지 확인 후 변환
-                    let timeStr = "";
-                    try {
-                      const dateObj = new Date(row[0]);
-                      timeStr = dateObj.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                    } catch(e) {
-                      timeStr = row[0];
-                    }
+                    // row = [Session Name, Session ID, Employee ID, Employee Name, Check-in Time, Check-out Time, User Agent]
+                    const eId = row[2];
+                    const eName = row[3];
+                    const checkInRaw = row[4];
+                    const checkOutRaw = row[5];
                     
-                    const eId = row[3];
-                    const eName = row[4];
+                    const formatTime = (rawTime) => {
+                      if (!rawTime) return null;
+                      try {
+                        const dateObj = new Date(rawTime);
+                        if (isNaN(dateObj.getTime())) return null;
+                        return dateObj.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                      } catch(e) {
+                        return null;
+                      }
+                    };
+
+                    const checkInTimeStr = formatTime(checkInRaw);
+                    const checkOutTimeStr = formatTime(checkOutRaw);
+                    
                     return (
-                      <li key={index} style={{ padding: '0.75rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                          <strong style={{ display: 'block', color: 'var(--primary-color)', fontSize: '1.1rem' }}>{eName}</strong>
-                          <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>사번: {eId}</span>
+                      <li key={index} style={{ padding: '1rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ flex: '1' }}>
+                          <strong style={{ display: 'block', color: 'var(--primary-color)', fontSize: '1.1rem', marginBottom: '4px' }}>{eName}</strong>
+                          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>사번: {eId}</span>
                         </div>
-                        <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', backgroundColor: '#f1f5f9', padding: '0.25rem 0.5rem', borderRadius: '6px' }}>
-                          {timeStr}
+                        
+                        <div style={{ flex: '2', display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                            <span className="status-badge checkin">출석</span>
+                            <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', backgroundColor: '#f1f5f9', padding: '0.25rem 0.5rem', borderRadius: '6px', minWidth: '80px', textAlign: 'center' }}>
+                              {checkInTimeStr || '-'}
+                            </span>
+                          </div>
+                          
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                            <span className="status-badge checkout">퇴실</span>
+                            <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', backgroundColor: '#f1f5f9', padding: '0.25rem 0.5rem', borderRadius: '6px', minWidth: '80px', textAlign: 'center' }}>
+                              {checkOutTimeStr || '-'}
+                            </span>
+                          </div>
                         </div>
                       </li>
                     );
@@ -320,9 +467,9 @@ export default function AdminPage() {
               )}
             </div>
             
-            <button onClick={handleReset} className="btn-secondary">
+            <button onClick={handleReset} className="btn-secondary" disabled={isProcessing}>
               <ArrowLeft size={18} />
-              세션 종료 및 새 교육 만들기
+              {isProcessing ? '세션 종료 중...' : '세션 종료 및 새 교육 만들기'}
             </button>
           </div>
         )}

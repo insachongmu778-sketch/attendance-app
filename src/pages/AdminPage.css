@@ -158,3 +158,56 @@
   color: var(--text-primary);
   border-color: #cbd5e1;
 }
+
+/* QR Toggle Styles */
+.qr-toggle-container {
+  display: flex;
+  background-color: #f1f5f9;
+  border-radius: 12px;
+  padding: 0.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.qr-toggle-btn {
+  flex: 1;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.qr-toggle-btn:hover {
+  color: var(--text-primary);
+}
+
+.qr-toggle-btn.active {
+  background-color: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.qr-toggle-btn.checkout.active {
+  color: #c2410c;
+}
+
+/* Status Badge Styles */
+.status-badge {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.status-badge.checkin {
+  background-color: #e0e7ff;
+  color: #4338ca;
+}
+
+.status-badge.checkout {
+  background-color: #ffedd5;
+  color: #c2410c;
+}
