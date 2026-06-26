@@ -74,14 +74,14 @@
 }
 
 /* Success Screen Styles */
-.success-container {
+.checkin-card .success-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 2rem 0;
 }
 
-.success-icon-wrapper {
+.checkin-card .success-icon-wrapper {
   width: 90px;
   height: 90px;
   background-color: #dcfce7;
@@ -94,19 +94,19 @@
   box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.2);
 }
 
-.success-title {
+.checkin-card .success-title {
   font-size: 2rem;
   color: var(--success-color);
   margin-bottom: 1rem;
 }
 
-.success-message {
+.checkin-card .success-message {
   font-size: 1.2rem;
   color: var(--text-primary);
   margin-bottom: 0.5rem;
 }
 
-.success-submessage {
+.checkin-card .success-submessage {
   color: var(--text-secondary);
   font-size: 0.95rem;
 }

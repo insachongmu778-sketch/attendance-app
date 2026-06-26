@@ -82,14 +82,14 @@
 }
 
 /* Success Screen Styles */
-.success-container {
+.checkout-card .success-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 2rem 0;
 }
 
-.success-icon-wrapper.checkout {
+.checkout-card .success-icon-wrapper.checkout {
   width: 90px;
   height: 90px;
   background-color: #ffedd5;
@@ -102,19 +102,19 @@
   box-shadow: 0 10px 15px -3px rgba(249, 115, 22, 0.2);
 }
 
-.success-title {
+.checkout-card .success-title {
   font-size: 2rem;
   color: #f97316;
   margin-bottom: 1rem;
 }
 
-.success-message {
+.checkout-card .success-message {
   font-size: 1.2rem;
   color: var(--text-primary);
   margin-bottom: 0.5rem;
 }
 
-.success-submessage {
+.checkout-card .success-submessage {
   color: var(--text-secondary);
   font-size: 0.95rem;
 }
