@@ -378,7 +378,7 @@ export default function AdminPage() {
                 </button>
               </div>
 
-              <p className="instruction-text" style={{ marginBottom: '2rem', fontSize: '1.1rem' }}>
+              <p className="instruction-text" style={{ marginBottom: '2rem', fontSize: '1.1rem', wordBreak: 'keep-all', textAlign: 'center' }}>
                 스마트폰 카메라로 아래 <strong>{qrMode === 'check-in' ? '출석 체크' : '종료 체크'} QR 코드</strong>를 스캔해주세요
               </p>
               
