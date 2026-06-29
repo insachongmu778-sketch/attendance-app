@@ -308,7 +308,7 @@ export default function AdminPage() {
               />
             </div>
 
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
+            <div className="date-time-group">
               <div style={{ flex: 1 }}>
                 <label className="form-label" htmlFor="sessionDate">교육 일자</label>
                 <input

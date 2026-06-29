@@ -37,6 +37,18 @@
   margin-bottom: 2rem;
 }
 
+.date-time-group {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+@media (max-width: 600px) {
+  .date-time-group {
+    flex-direction: column;
+  }
+}
+
 .form-label {
   display: block;
   margin-bottom: 0.75rem;
