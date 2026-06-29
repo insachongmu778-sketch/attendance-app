@@ -41,6 +41,12 @@
   display: flex;
   gap: 1rem;
   margin-bottom: 2rem;
+  width: 100%;
+}
+
+.date-time-group > div {
+  flex: 1;
+  min-width: 0;
 }
 
 @media (max-width: 600px) {

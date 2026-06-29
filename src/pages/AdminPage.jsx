@@ -309,7 +309,7 @@ export default function AdminPage() {
             </div>
 
             <div className="date-time-group">
-              <div style={{ flex: 1 }}>
+              <div>
                 <label className="form-label" htmlFor="sessionDate">교육 일자</label>
                 <input
                   id="sessionDate"
@@ -320,7 +320,7 @@ export default function AdminPage() {
                   disabled={isProcessing}
                 />
               </div>
-              <div style={{ flex: 1 }}>
+              <div>
                 <label className="form-label">교육 시간 (시작 ~ 종료)</label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <input
