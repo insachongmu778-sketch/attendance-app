@@ -357,9 +357,14 @@ export default function AdminPage() {
               </div>
               
               {(activeSession.date || activeSession.startTime || activeSession.endTime) && (
-                <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: '500' }}>
-                  📅 {activeSession.date} {activeSession.startTime && `⏰ ${activeSession.startTime}`} {activeSession.endTime && `~ ${activeSession.endTime}`}
-                </p>
+                <div className="session-datetime-display">
+                  {activeSession.date && <span>📅 {activeSession.date}</span>}
+                  {(activeSession.startTime || activeSession.endTime) && (
+                    <span>
+                      ⏰ {activeSession.startTime} {activeSession.endTime && `~ ${activeSession.endTime}`}
+                    </span>
+                  )}
+                </div>
               )}
               
               <div className="qr-toggle-container">

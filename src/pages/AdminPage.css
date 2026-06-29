@@ -139,6 +139,11 @@
   .qr-wrapper {
     padding: 1rem;
   }
+  
+  .session-datetime-display {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
 }
 
 .qr-section {
@@ -152,6 +157,18 @@
   align-items: center;
   gap: 1rem;
   margin-bottom: 1rem;
+}
+
+.session-datetime-display {
+  color: var(--text-secondary);
+  margin-top: 0.5rem;
+  margin-bottom: 1.5rem;
+  font-size: 1.1rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
 }
 
 .badge {
