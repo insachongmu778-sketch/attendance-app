@@ -49,12 +49,6 @@
   min-width: 0;
 }
 
-@media (max-width: 600px) {
-  .date-time-group {
-    flex-direction: column;
-  }
-}
-
 .form-label {
   display: block;
   margin-bottom: 0.75rem;
@@ -96,7 +90,11 @@
 
 @media (max-width: 600px) {
   .date-time-group {
-    flex-direction: column;
+    display: block;
+  }
+  
+  .date-time-group > div:first-child {
+    margin-bottom: 1.5rem;
   }
   
   .form-input {
