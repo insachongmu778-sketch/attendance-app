@@ -350,7 +350,7 @@ export default function AdminPage() {
           </form>
         ) : (
           <div className="qr-section animate-fade-in">
-            <div id="qr-export-section" style={{ padding: '2.5rem', backgroundColor: '#ffffff', borderRadius: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.5rem', width: 'fit-content', minWidth: '400px', maxWidth: '100%' }}>
+            <div id="qr-export-section" className="qr-export-card">
               <div className="session-info" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', gap: '0.75rem', width: '100%' }}>
                 <span className="badge" style={{ flexShrink: 0, whiteSpace: 'nowrap', marginTop: '0.4rem' }}>진행중</span>
                 <h2 style={{ fontSize: '1.75rem', margin: 0, textAlign: 'left', lineHeight: '1.3', wordBreak: 'break-all', minWidth: 0 }}>{activeSession.name}</h2>
