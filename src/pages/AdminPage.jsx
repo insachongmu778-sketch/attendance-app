@@ -412,6 +412,11 @@ export default function AdminPage() {
               </a>
             </div>
             
+            <button onClick={handleReset} className="btn-secondary" disabled={isProcessing} style={{ width: '100%', marginBottom: '2rem', color: '#e11d48', borderColor: '#fecdd3', backgroundColor: '#fff1f2' }}>
+              <ArrowLeft size={18} />
+              {isProcessing ? '세션 종료 중...' : '세션 종료 및 새 교육 만들기'}
+            </button>
+
             <div className="dashboard-preview">
               <h3>실시간 출석 현황 ({attendees.length}명)</h3>
               {attendees.length === 0 ? (
@@ -467,11 +472,6 @@ export default function AdminPage() {
                 </ul>
               )}
             </div>
-            
-            <button onClick={handleReset} className="btn-secondary" disabled={isProcessing}>
-              <ArrowLeft size={18} />
-              {isProcessing ? '세션 종료 중...' : '세션 종료 및 새 교육 만들기'}
-            </button>
           </div>
         )}
       </div>
