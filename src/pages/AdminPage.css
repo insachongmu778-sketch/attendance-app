@@ -115,6 +115,10 @@
 }
 
 @media (max-width: 600px) {
+  .admin-container {
+    padding: 1rem;
+  }
+
   .date-time-group {
     display: block;
   }
