@@ -311,14 +311,15 @@ export default function AdminPage() {
             <div className="date-time-group">
               <div>
                 <label className="form-label" htmlFor="sessionDate">교육 일자</label>
-                <input
-                  id="sessionDate"
-                  className="form-input"
-                  type="date"
-                  value={sessionDate}
-                  onChange={(e) => setSessionDate(e.target.value)}
-                  disabled={isProcessing}
-                />
+                <div className="date-input-wrapper">
+                  <input
+                    id="sessionDate"
+                    type="date"
+                    value={sessionDate}
+                    onChange={(e) => setSessionDate(e.target.value)}
+                    disabled={isProcessing}
+                  />
+                </div>
               </div>
               <div>
                 <label className="form-label">교육 시간 (시작 ~ 종료)</label>

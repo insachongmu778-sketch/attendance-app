@@ -88,6 +88,32 @@
   min-width: 0;
 }
 
+.date-input-wrapper {
+  width: 100%;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  background-color: #f8fafc;
+  overflow: hidden;
+  display: flex;
+}
+
+.date-input-wrapper:focus-within {
+  border-color: var(--primary-color);
+  background-color: #ffffff;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.date-input-wrapper input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 1rem 1.25rem;
+  font-size: 1.1rem;
+  outline: none;
+  color: inherit;
+  font-family: inherit;
+}
+
 @media (max-width: 600px) {
   .date-time-group {
     display: block;
@@ -97,7 +123,7 @@
     margin-bottom: 1.5rem;
   }
   
-  .form-input {
+  .form-input, .date-input-wrapper input {
     padding: 0.75rem 0.75rem;
     font-size: 1rem;
   }
